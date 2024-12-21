@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Pixel Locator and Rectangle Drawer</title>
+    <style>
+        #image-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        #canvas {
+            border: 1px solid #ccc;
+        }
+
+        #coordinates {
+            margin-top: 10px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+        }
+
+        .corner-coord {
+            position: absolute;
+            background: white;
+            border: 1px solid black;
+            padding: 2px;
+            font-size: 10px;
+            transform: translate(-50%, -100%);
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Image Pixel Locator and Rectangle Drawer</h1>
+    <div id="image-container">
+        <canvas id="canvas"></canvas>
+    </div>
+    <div id="coordinates">Hover over the image to see pixel coordinates.</div>
+    <button id="export-button">Export to Image</button>
+
+    <script>
+        const canvas = document.getElementById("canvas");
+        const context = canvas.getContext("2d");
+        const coordinates = document.getElementById("coordinates");
+        const exportButton = document.getElementById("export-button");
+
+        const image = new Image();
+        image.src = "traffic_2_direction.jpg"; // Replace with your image path
+
+        let startX, startY, isDrawing = false;
+        const cornerCoords = []; // Store corner coordinates for non-export rendering
+
+        image.onload = () => {
+            canvas.width = image.width;
+            canvas.height = image.height;
+            context.drawImage(image, 0, 0);
+        };
+
+        canvas.addEventListener("mousemove", (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor(event.clientX - rect.left);
+            const y = Math.floor(event.clientY - rect.top);
+            coordinates.textContent = `Pixel Coordinates: X = ${x}, Y = ${y}`;
+        });
+
+        canvas.addEventListener("mouseleave", () => {
+            coordinates.textContent = "Hover over the image to see pixel coordinates.";
+        });
+
+        canvas.addEventListener("mousedown", (event) => {
+            const rect = canvas.getBoundingClientRect();
+            startX = Math.floor(event.clientX - rect.left);
+            startY = Math.floor(event.clientY - rect.top);
+            isDrawing = true;
+        });
+
+        canvas.addEventListener("mouseup", (event) => {
+            if (!isDrawing) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const endX = Math.floor(event.clientX - rect.left);
+            const endY = Math.floor(event.clientY - rect.top);
+
+            drawRectangle(startX, startY, endX, endY);
+            isDrawing = false;
+        });
+
+        function drawRectangle(x1, y1, x2, y2) {
+            context.drawImage(image, 0, 0); // Redraw the image to clear previous overlays
+
+            const width = x2 - x1;
+            const height = y2 - y1;
+
+            context.strokeStyle = "red";
+            context.lineWidth = 2;
+            context.strokeRect(x1, y1, width, height);
+
+            // Store corner coordinates for non-export rendering
+            cornerCoords.push({ x: x1, y: y1 });
+            cornerCoords.push({ x: x2, y: y1 });
+            cornerCoords.push({ x: x1, y: y2 });
+            cornerCoords.push({ x: x2, y: y2 });
+
+            // Display corner coordinates
+            displayCornerCoord(x1, y1);
+            displayCornerCoord(x2, y1);
+            displayCornerCoord(x1, y2);
+            displayCornerCoord(x2, y2);
+        }
+
+        function displayCornerCoord(x, y) {
+            const coordDiv = document.createElement("div");
+            coordDiv.className = "corner-coord";
+            coordDiv.style.left = `${x + canvas.offsetLeft}px`;
+            coordDiv.style.top = `${y + canvas.offsetTop}px`;
+            coordDiv.textContent = `(${x}, ${y})`;
+            document.body.appendChild(coordDiv);
+        }
+
+        exportButton.addEventListener("click", () => {
+            // Redraw the image and rectangles without displaying corner coordinates
+            context.drawImage(image, 0, 0);
+            context.strokeStyle = "red";
+            context.lineWidth = 2;
+            for (let i = 0; i < cornerCoords.length; i += 4) {
+                const x1 = cornerCoords[i].x;
+                const y1 = cornerCoords[i].y;
+                const x2 = cornerCoords[i + 1].x;
+                const y2 = cornerCoords[i + 2].y;
+                context.strokeRect(x1, y1, x2 - x1, y2 - y1);
+            }
+
+            const link = document.createElement("a");
+            link.download = "exported-image.png";
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+        });
+    </script>
+</body>
+
+</html>
